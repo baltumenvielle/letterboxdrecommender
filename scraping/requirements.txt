@@ -1,6 +1,0 @@
-Scrapy==2.12.0
-ipython==9.1.0
-webdriver-manager==4.0.2
-undetected-chromedriver==3.5.5
-tqdm==4.67.1
-selenium==4.31.0
