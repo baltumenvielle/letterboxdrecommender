@@ -2,7 +2,7 @@ import pandas as pd
 import streamlit as st
 import zipfile
 import io
-from imbd_model import utils, model
+from imdb_model import utils, model
 
 @st.cache_data
 def cargar_top_imdb():
@@ -37,7 +37,10 @@ if uploaded_file:
             # Mostrar un solo GIF mientras se cargan los datos
             gif_url = "https://media.giphy.com/media/3o7rc0qU6m5hneMsuc/giphy.gif"
             gif_placeholder = st.empty()
-            gif_placeholder.image(gif_url, width=300)
+            gif_placeholder.markdown(
+                f"<div style='text-align: center;'><img src='{gif_url}' width='300'></div>",
+                unsafe_allow_html=True
+            )
 
             # Cargar y enriquecer datos
             imdb_data = cargar_top_imdb()
@@ -59,27 +62,25 @@ if uploaded_file:
                 )
 
             # Mostrar top 10
-            st.markdown("## 🎬 Top 10 Recomendaciones Personalizadas")
+            st.markdown("## 🎬 Top 100 Recomendaciones Personalizadas")
             st.markdown("Basadas en tu historial de películas vistas:")
 
             columnas_a_mostrar = ['title', 'year', 'genres', 'directors', 'predicted_rating']
-            recomendaciones_top10 = recomendaciones[columnas_a_mostrar].head(10)
-            st.dataframe(recomendaciones_top10, use_container_width=True)
+            recomendaciones_top100 = (
+                recomendaciones[columnas_a_mostrar]
+                .sort_values(by='predicted_rating', ascending=False)
+                .head(100)
+            )
+            st.dataframe(recomendaciones_top100, use_container_width=True, hide_index=True)
 
-            # Recomendación destacada
-            top_reco = recomendaciones_top10.iloc[0]
-            col1, col2 = st.columns([1, 3])
-            with col1:
-                st.markdown("## 🌟 Recomendación destacada:")
-            with col2:
-                st.markdown(f"**{top_reco['title']}** ({top_reco['year']}) - 🎯 Predicción: `{top_reco['predicted_rating']:.2f}`")
+            gif_placeholder.empty()
 
             # Descarga de recomendaciones como Excel y CSV
             st.markdown("### 💾 Descargar recomendaciones")
 
             # Excel
             output_excel = io.BytesIO()
-            recomendaciones_top10.to_excel(output_excel, index=False, engine='openpyxl')
+            recomendaciones_top100.to_excel(output_excel, index=False, engine='openpyxl')
             output_excel.seek(0)
 
             st.download_button(
@@ -90,7 +91,7 @@ if uploaded_file:
             )
 
             # CSV
-            csv_data = recomendaciones_top10.to_csv(index=False).encode('utf-8')
+            csv_data = recomendaciones_top100.to_csv(index=False).encode('utf-8')
 
             st.download_button(
                 label="⬇️ Descargar como CSV",
