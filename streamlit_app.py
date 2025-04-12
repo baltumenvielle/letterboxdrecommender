@@ -65,9 +65,8 @@ if uploaded_file:
             st.markdown("## 🎬 Top 100 Recomendaciones Personalizadas")
             st.markdown("Basadas en tu historial de películas vistas:")
 
-            columnas_a_mostrar = ['title', 'year', 'genres', 'directors', 'predicted_rating']
             recomendaciones_top100 = (
-                recomendaciones[columnas_a_mostrar]
+                recomendaciones
                 .sort_values(by='predicted_rating', ascending=False)
                 .head(100)
             )
