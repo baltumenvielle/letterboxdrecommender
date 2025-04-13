@@ -36,32 +36,39 @@ if file1 and file2:
 
     if user1 is None or user2 is None:
         st.error("❌ Uno de los archivos ZIP no contiene un archivo válido llamado `ratings.csv`.")
-    else:
+    else:   
+        user1 = user1.drop(['Letterbod URI', 'Date'])
+        user2 = user2.drop(['Letterbod URI', 'Date'])
+        merged = pd.merge(user1, user2, on=['title', 'year'], suffixes=('_u1', '_u2'))
+        merged['rating'] = (merged['user_rating_u1'] + merged['user_rating_u2']) / 2
+
         imdb_data = utils.cargar_top_imdb()
         user1_enriched = utils.enriquecer_datos(user1, imdb_data)
         user2_enriched = utils.enriquecer_datos(user2, imdb_data)
+        # Unir gustos y promediar ratings
+        
+        # Mantener solo las columnas necesarias para entrenar
+        columnas_entrenamiento = ['title', 'year', 'genres_u1', 'directors_u1', 'actors_u1', 'joint_rating']
+        merged = merged[columnas_entrenamiento].rename(columns={
+            'genres_u1': 'genres',
+            'directors_u1': 'directors',
+            'actors_u1': 'actors',
+            'joint_rating': 'rating'
+        })
 
-        # Entrenar modelos
-        with st.spinner("🎷 Analizando gustos..."):
-            model1, mlb_g1, mlb_d1, mlb_a1 = model.preparar_y_entrenar_modelo(user1_enriched)
-            model2, mlb_g2, mlb_d2, mlb_a2 = model.preparar_y_entrenar_modelo(user2_enriched)
+        st.write(merged.columns)
 
-            rec1 = model.predecir_recomendaciones(model1, imdb_data, user1_enriched['title'], mlb_g1, mlb_d1, mlb_a1)
-            rec2 = model.predecir_recomendaciones(model2, imdb_data, user2_enriched['title'], mlb_g2, mlb_d2, mlb_a2)
-
-        # Eliminar columnas de puntuación
-        rec1 = rec1.drop(columns=["predicted_rating"])
-        rec2 = rec2.drop(columns=["predicted_rating"])
-
-        en_comun = pd.merge(rec1, rec2, on="title", how="inner")
+        # Entrenar modelo conjunto
+        with st.spinner("🎷 Buscando armonía cinéfila..."):
+            model_joint, mlb_g, mlb_d, mlb_a = model.preparar_y_entrenar_modelo(merged)
+            recomendaciones = model.predecir_recomendaciones(model_joint, imdb_data, merged['title'], mlb_g, mlb_d, mlb_a)
 
         st.markdown("### ✨ Películas que ambos podrían disfrutar:")
-        st.dataframe(en_comun[['title']], use_container_width=True)
+        st.dataframe(recomendaciones[['title']], use_container_width=True)
 
-        # Descarga
         st.download_button(
-            label="⬇️ Descargar lista en común (CSV)",
-            data=en_comun[['title']].to_csv(index=False).encode('utf-8'),
-            file_name='peliculas_en_comun.csv',
+            label="⬇️ Descargar lista recomendada (CSV)",
+            data=recomendaciones[['title']].to_csv(index=False).encode('utf-8'),
+            file_name='peliculas_recomendadas.csv',
             mime='text/csv'
         )
