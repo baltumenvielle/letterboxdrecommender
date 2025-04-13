@@ -3,6 +3,9 @@ import streamlit as st
 import zipfile
 import io
 from imdb_model import utils, model
+import warnings
+
+warnings.filterwarnings('ignore')
 
 @st.cache_data
 def cargar_top_imdb():

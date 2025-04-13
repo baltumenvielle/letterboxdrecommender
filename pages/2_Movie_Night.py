@@ -3,13 +3,20 @@ import streamlit as st
 import zipfile
 import io
 from imdb_model import utils, model
+import warnings
 
+warnings.filterwarnings('ignore')
+
+@st.cache_resource
+def entrenar_modelo(enriched_user_data):
+    return model.preparar_y_entrenar_modelo(enriched_user_data)
 
 # Configuración de la página
 st.set_page_config(page_title="Movie Night?", page_icon="🍿")
 
 st.title("🍿 Movie night?")
 st.markdown("""
+¿Te recomendamos una película para esta noche?
 Subí dos archivos ZIP exportados desde Letterboxd (uno por persona).  
 La app buscará películas que ambos quieran ver, basadas en las predicciones personalizadas.
 """, unsafe_allow_html=True)
@@ -37,38 +44,80 @@ if file1 and file2:
     if user1 is None or user2 is None:
         st.error("❌ Uno de los archivos ZIP no contiene un archivo válido llamado `ratings.csv`.")
     else:   
-        user1 = user1.drop(['Letterbod URI', 'Date'])
-        user2 = user2.drop(['Letterbod URI', 'Date'])
-        merged = pd.merge(user1, user2, on=['title', 'year'], suffixes=('_u1', '_u2'))
-        merged['rating'] = (merged['user_rating_u1'] + merged['user_rating_u2']) / 2
+        # Crear columnas vacías a los costados y una al centro para el botón
+        col1, col2, col3 = st.columns([1, 2, 1])
+        with col1:
+            st.empty()
+        with col2:
+            ejecutar = st.button("✨ ¡Recomendanos algo!", type="primary")
+        with col3:
+            st.empty()
+        # Botón para iniciar el procesamiento
+        if ejecutar:
+            progress = st.progress(0, text="⏳ Iniciando análisis...")
 
-        imdb_data = utils.cargar_top_imdb()
-        user1_enriched = utils.enriquecer_datos(user1, imdb_data)
-        user2_enriched = utils.enriquecer_datos(user2, imdb_data)
-        # Unir gustos y promediar ratings
-        
-        # Mantener solo las columnas necesarias para entrenar
-        columnas_entrenamiento = ['title', 'year', 'genres_u1', 'directors_u1', 'actors_u1', 'joint_rating']
-        merged = merged[columnas_entrenamiento].rename(columns={
-            'genres_u1': 'genres',
-            'directors_u1': 'directors',
-            'actors_u1': 'actors',
-            'joint_rating': 'rating'
-        })
+            # Paso 1: Limpieza
+            user1 = user1.drop(['Date', 'Letterboxd URI'], axis=1)
+            user2 = user2.drop(['Date', 'Letterboxd URI'], axis=1)
+            progress.progress(10, text="🧹 Limpiando datos...")
 
-        st.write(merged.columns)
+            # Paso 2: Unir ratings
+            merged = pd.merge(user1, user2, on=['title', 'year'], suffixes=('_u1', '_u2'))
+            merged['rating'] = (merged['rating_u1'] + merged['rating_u2']) / 2
+            progress.progress(30, text="🔗 Combinando gustos...")
 
-        # Entrenar modelo conjunto
-        with st.spinner("🎷 Buscando armonía cinéfila..."):
-            model_joint, mlb_g, mlb_d, mlb_a = model.preparar_y_entrenar_modelo(merged)
-            recomendaciones = model.predecir_recomendaciones(model_joint, imdb_data, merged['title'], mlb_g, mlb_d, mlb_a)
+            # Paso 3: Enriquecer con datos de IMDb
+            imdb_data = utils.cargar_top_imdb()
+            enriched_user_data = utils.enriquecer_datos(merged, imdb_data)
+            progress.progress(50, text="🎞️ Enriqueciendo con IMDb...")
 
-        st.markdown("### ✨ Películas que ambos podrían disfrutar:")
-        st.dataframe(recomendaciones[['title']], use_container_width=True)
+            # Paso 4: Entrenamiento del modelo
+            with st.spinner("⚙️ Entrenando el modelo..."):
+                model_trained, mlb_g, mlb_d, mlb_a = entrenar_modelo(enriched_user_data)
+            progress.progress(75, text="📈 Modelo entrenado...")
 
-        st.download_button(
-            label="⬇️ Descargar lista recomendada (CSV)",
-            data=recomendaciones[['title']].to_csv(index=False).encode('utf-8'),
-            file_name='peliculas_recomendadas.csv',
-            mime='text/csv'
-        )
+            # Paso 5: Predicción
+            with st.spinner("🎯 Generando recomendaciones..."):
+                recomendaciones = model.predecir_recomendaciones(
+                    model_trained,
+                    imdb_data,
+                    enriched_user_data['title'],
+                    mlb_g, mlb_d, mlb_a
+                )
+            progress.progress(100, text="✅ ¡Listo!")
+
+            # Mostrar resultados
+            st.success("🎬 ¡Recomendaciones generadas con éxito!")
+
+            recomendaciones_top20 = (
+                recomendaciones
+                .sort_values(by='predicted_rating', ascending=False)
+                .head(20)
+            )
+
+            st.dataframe(recomendaciones_top20, use_container_width=True, hide_index=True)
+
+            # Descarga de recomendaciones como Excel y CSV
+            st.markdown("### 💾 Descargar recomendaciones")
+
+            # Excel
+            output_excel = io.BytesIO()
+            recomendaciones_top20.to_excel(output_excel, index=False, engine='openpyxl')
+            output_excel.seek(0)
+
+            st.download_button(
+                label="⬇️ Descargar como Excel",
+                data=output_excel,
+                file_name='recomendaciones.xlsx',
+                mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+            )
+
+            # CSV
+            csv_data = recomendaciones_top20.to_csv(index=False).encode('utf-8')
+
+            st.download_button(
+                label="⬇️ Descargar como CSV",
+                data=csv_data,
+                file_name='recomendaciones.csv',
+                mime='text/csv'
+            )
