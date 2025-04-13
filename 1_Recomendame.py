@@ -22,7 +22,6 @@ st.markdown("""
     Las recomendaciones se basan en tus películas vistas y datos enriquecidos desde IMDb.  
 """, unsafe_allow_html=True)
 
-# Subida de archivo ZIP
 uploaded_file = st.file_uploader("📂 Subí el archivo ZIP", type=["zip"])
 
 if uploaded_file:
@@ -36,26 +35,29 @@ if uploaded_file:
 
             st.success(f"✅ Archivo `{ratings_file[0]}` cargado exitosamente.")
 
-            # Mostrar un solo GIF mientras se cargan los datos
-            gif_url = "https://media.giphy.com/media/3o7rc0qU6m5hneMsuc/giphy.gif"
-            gif_placeholder = st.empty()
-            gif_placeholder.markdown(
-                f"<div style='text-align: center;'><img src='{gif_url}' width='300'></div>",
-                unsafe_allow_html=True
-            )
+            # Botón para generar recomendaciones
+            st.markdown("<div style='text-align: center;'>", unsafe_allow_html=True)
+            procesar = st.button("🔍 Generar Recomendaciones", type="primary")
+            st.markdown("</div>", unsafe_allow_html=True)
 
-            # Cargar y enriquecer datos
-            imdb_data = cargar_top_imdb()
-            enriched_user_data = utils.enriquecer_datos(user_data, imdb_data)
+            if procesar:
+                # Barra de progreso
+                progreso = st.progress(0, text="Inicializando...")
 
-            # Entrenamiento del modelo
-            with st.spinner("⚙️ Entrenando el modelo..."):
+                # Paso 1: Cargar IMDb
+                progreso.progress(20, text="🔄 Cargando base de datos IMDb...")
+                imdb_data = cargar_top_imdb()
+
+                # Paso 2: Enriquecer datos
+                progreso.progress(50, text="🔧 Enriqueciendo tus datos...")
+                enriched_user_data = utils.enriquecer_datos(user_data, imdb_data)
+
+                # Paso 3: Entrenar modelo
+                progreso.progress(75, text="⚙️ Entrenando modelo personalizado...")
                 model_trained, mlb_g, mlb_d, mlb_a = entrenar_modelo(enriched_user_data)
 
-            st.success("📈 ¡Modelo entrenado con éxito!")
-
-            # Generar recomendaciones
-            with st.spinner("🎯 Generando recomendaciones..."):
+                # Paso 4: Generar recomendaciones
+                progreso.progress(90, text="🎯 Generando recomendaciones...")
                 recomendaciones = model.predecir_recomendaciones(
                     model_trained,
                     imdb_data,
@@ -63,43 +65,36 @@ if uploaded_file:
                     mlb_g, mlb_d, mlb_a
                 )
 
-            # Mostrar top 10
-            st.markdown("## 🎬 Top 100 Recomendaciones Personalizadas")
-            st.markdown("Basadas en tu historial de películas vistas:")
+                progreso.progress(100, text="✅ ¡Listo!")
 
-            recomendaciones_top100 = (
-                recomendaciones
-                .sort_values(by='predicted_rating', ascending=False)
-                .head(100)
-            )
-            st.dataframe(recomendaciones_top100, use_container_width=True, hide_index=True)
+                # Mostrar top 100
+                st.markdown("## 🎬 Top 100 Recomendaciones Personalizadas")
+                recomendaciones_top100 = (
+                    recomendaciones.sort_values(by='predicted_rating', ascending=False).head(100)
+                )
+                st.dataframe(recomendaciones_top100, use_container_width=True, hide_index=True)
 
-            gif_placeholder.empty()
+                # Botones de descarga
+                st.markdown("### 💾 Descargar recomendaciones")
 
-            # Descarga de recomendaciones como Excel y CSV
-            st.markdown("### 💾 Descargar recomendaciones")
+                # Excel
+                output_excel = io.BytesIO()
+                recomendaciones_top100.to_excel(output_excel, index=False, engine='openpyxl')
+                output_excel.seek(0)
+                st.download_button(
+                    label="⬇️ Descargar como Excel",
+                    data=output_excel,
+                    file_name='recomendaciones.xlsx',
+                    mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+                )
 
-            # Excel
-            output_excel = io.BytesIO()
-            recomendaciones_top100.to_excel(output_excel, index=False, engine='openpyxl')
-            output_excel.seek(0)
-
-            st.download_button(
-                label="⬇️ Descargar como Excel",
-                data=output_excel,
-                file_name='recomendaciones.xlsx',
-                mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-            )
-
-            # CSV
-            csv_data = recomendaciones_top100.to_csv(index=False).encode('utf-8')
-
-            st.download_button(
-                label="⬇️ Descargar como CSV",
-                data=csv_data,
-                file_name='recomendaciones.csv',
-                mime='text/csv'
-            )
-
+                # CSV
+                csv_data = recomendaciones_top100.to_csv(index=False).encode('utf-8')
+                st.download_button(
+                    label="⬇️ Descargar como CSV",
+                    data=csv_data,
+                    file_name='recomendaciones.csv',
+                    mime='text/csv'
+                )
         else:
             st.error("❌ No se encontró un archivo llamado `ratings.csv` en el ZIP. Asegurate de exportarlo correctamente desde Letterboxd.")
