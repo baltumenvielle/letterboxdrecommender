@@ -12,8 +12,7 @@ def cargar_top_imdb():
 def entrenar_modelo(enriched_user_data):
     return model.preparar_y_entrenar_modelo(enriched_user_data)
 
-# Configuración de la página
-st.set_page_config(page_title="Letterboxd Recommender", layout="wide")
+st.set_page_config(page_title="Recomendame!", page_icon="🎬")
 st.title("🎬 Letterboxd Recommender")
 st.markdown("""
     Subí tu archivo ZIP exportado desde Letterboxd (debe contener un archivo llamado `ratings.csv`).
