@@ -16,9 +16,9 @@ st.set_page_config(page_title="Movie Night?", page_icon="🍿")
 
 st.title("🍿 Movie night?")
 st.markdown("""
-¿Te recomendamos una película para esta noche?
-Subí dos archivos ZIP exportados desde Letterboxd (uno por persona).  
-La app buscará películas que ambos quieran ver, basadas en las predicciones personalizadas.
+    ¿Te recomendamos una película para esta noche?
+    Subí dos archivos ZIP exportados desde Letterboxd (uno por persona).  
+    La app buscará películas que ambos quieran ver, basadas en las predicciones personalizadas.
 """, unsafe_allow_html=True)
 
 col1, col2 = st.columns(2)
@@ -52,7 +52,7 @@ if file1 and file2:
             ejecutar = st.button("✨ ¡Recomendanos algo!", type="primary")
         with col3:
             st.empty()
-        # Botón para iniciar el procesamiento
+
         if ejecutar:
             progress = st.progress(0, text="⏳ Iniciando análisis...")
 
@@ -87,7 +87,7 @@ if file1 and file2:
             progress.progress(100, text="✅ ¡Listo!")
 
             # Mostrar resultados
-            st.success("🎬 ¡Recomendaciones generadas con éxito!")
+            st.success("## 🎬 ¡A disfrutar!")
 
             recomendaciones_top20 = (
                 recomendaciones

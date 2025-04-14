@@ -16,8 +16,9 @@ def entrenar_modelo(enriched_user_data):
     return model.preparar_y_entrenar_modelo(enriched_user_data)
 
 st.set_page_config(page_title="Recomendame!", page_icon="🎬")
-st.title("🎬 Letterboxd Recommender")
+st.title("🎬 Recomendame!")
 st.markdown("""
+    ¿Te recomendamos una película para esta noche?
     Subí tu archivo ZIP exportado desde Letterboxd (debe contener un archivo llamado `ratings.csv`).
     Las recomendaciones se basan en tus películas vistas y datos enriquecidos desde IMDb.  
 """, unsafe_allow_html=True)
@@ -35,12 +36,16 @@ if uploaded_file:
 
             st.success(f"✅ Archivo `{ratings_file[0]}` cargado exitosamente.")
 
-            # Botón para generar recomendaciones
-            st.markdown("<div style='text-align: center;'>", unsafe_allow_html=True)
-            procesar = st.button("🔍 Generar Recomendaciones", type="primary")
-            st.markdown("</div>", unsafe_allow_html=True)
+            # Crear columnas vacías a los costados y una al centro para el botón
+            col1, col2, col3 = st.columns([1, 2, 1])
+            with col1:
+                st.empty()
+            with col2:
+                ejecutar = st.button("✨ ¡Recomendame algo!", type="primary")
+            with col3:
+                st.empty()
 
-            if procesar:
+            if ejecutar:
                 # Barra de progreso
                 progreso = st.progress(0, text="Inicializando...")
 
@@ -68,7 +73,7 @@ if uploaded_file:
                 progreso.progress(100, text="✅ ¡Listo!")
 
                 # Mostrar top 100
-                st.markdown("## 🎬 Top 100 Recomendaciones Personalizadas")
+                st.success("## 🎬 ¡A disfrutar!")
                 recomendaciones_top100 = (
                     recomendaciones.sort_values(by='predicted_rating', ascending=False).head(100)
                 )
