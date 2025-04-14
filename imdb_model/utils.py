@@ -17,8 +17,7 @@ def cargar_letterboxd(file):
     return df
 
 def cargar_top_imdb():
-    df = pd.read_csv('imdb_top1000.csv').dropna()
-    print(df)
+    df = pd.read_csv('imdb_top1000.csv')
     return serializar(df)
 
 def serializar(df):
