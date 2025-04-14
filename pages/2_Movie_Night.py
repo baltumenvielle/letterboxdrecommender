@@ -87,7 +87,7 @@ if file1 and file2:
             progress.progress(100, text="✅ ¡Listo!")
 
             # Mostrar resultados
-            st.success("## 🎬 ¡A disfrutar!")
+            st.markdown("## 🎬 ¡A disfrutar!")
 
             recomendaciones_top20 = (
                 recomendaciones

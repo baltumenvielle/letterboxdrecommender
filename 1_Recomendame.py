@@ -34,8 +34,6 @@ if uploaded_file:
             with zip_ref.open(ratings_file[0]) as ratings_csv:
                 user_data = utils.cargar_letterboxd(ratings_csv)
 
-            st.success(f"✅ Archivo `{ratings_file[0]}` cargado exitosamente.")
-
             # Crear columnas vacías a los costados y una al centro para el botón
             col1, col2, col3 = st.columns([1, 2, 1])
             with col1:
@@ -73,7 +71,7 @@ if uploaded_file:
                 progreso.progress(100, text="✅ ¡Listo!")
 
                 # Mostrar top 100
-                st.success("## 🎬 ¡A disfrutar!")
+                st.markdown("## 🎬 ¡A disfrutar!")
                 recomendaciones_top100 = (
                     recomendaciones.sort_values(by='predicted_rating', ascending=False).head(100)
                 )
